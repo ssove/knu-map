@@ -11,16 +11,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
-import android.widget.FrameLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.places.GeoDataClient;
-import com.google.android.gms.location.places.PlaceDetectionClient;
-import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -30,8 +21,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 
@@ -44,14 +33,14 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     public Context mContext;
 
     public static final long TIME_INTERVAL_FOR_UPDATING_LOCATION = 1000; // ms
-    public static final float LEAST_DISTANCE_FOR_UPDATING_LOCATION = 3; // meter
+    public static final float LEAST_DISTANCE_FOR_UPDATING_LOCATION = 1; // meter
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
     private GoogleMap mMap;
     private CameraPosition mCameraPosition;
 
-    // A default location (Sydney, Australia) and default zoom to use when location permission is
+    // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
     // not granted.
-    private final LatLng mDefaultLocation = new LatLng(35.890313, 128.611307);
+    private final LatLng mDefaultLocation = new LatLng(35.890313, 128.611307); // coordinates of KNU
     private static final int DEFAULT_ZOOM = 15;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private boolean mLocationPermissionGranted;
@@ -77,16 +66,16 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
             locationList.add(latLng);
             mLastKnownLocation = location;
 
-            // Removes the existing marker.
+            // Remove the existing marker.
             if (marker != null) {
                 marker.remove();
             }
 
-            // Sets the new marker.
+            // Set the new marker.
             MarkerOptions mMarkerOptions = new MarkerOptions().position(latLng);
             marker = mMap.addMarker(mMarkerOptions);
 
-            // Draws the polyline of movement.
+            // Draw the polyline of movement.
             drawCapturingPolyline();
         }
 
@@ -150,7 +139,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
             public boolean onMyLocationButtonClick() {
                 LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-                // Gets the permissions.
+                // Get the permissions.
                 if ((ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.ACCESS_FINE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED)
                         && (ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -158,7 +147,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                     return false;
                 }
 
-                // Requests to update the location.
+                // Request to update the location periodically.
                 lm.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER,
                         TIME_INTERVAL_FOR_UPDATING_LOCATION,
@@ -170,41 +159,14 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
             }
         });
 
-        // Use a custom info window adapter to handle multiple lines of text in the
-        // info window contents.
-        mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
-
-            @Override
-            // Return null here, so that getInfoContents() is called next.
-            public View getInfoWindow(Marker arg0) {
-                return null;
-            }
-
-            @Override
-            public View getInfoContents(Marker marker) {
-                // Inflate the layouts for the info window, title and snippet.
-                View infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
-                        (FrameLayout) findViewById(R.id.map), false);
-
-                TextView title = ((TextView) infoWindow.findViewById(R.id.title));
-                title.setText(marker.getTitle());
-
-                TextView snippet = ((TextView) infoWindow.findViewById(R.id.snippet));
-                snippet.setText(marker.getSnippet());
-
-                return infoWindow;
-            }
-        });
+        // Move the camera to default location/zoom before getting the permission.
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
 
         // Prompt the user for permission.
         getLocationPermission();
 
         // Turn on the My Location layer and the related control on the map.
         updateLocationUI();
-
-        // Get the current location of the device and set the position of the map.
-        // getDeviceLocation();
-
     }
 
 
@@ -227,6 +189,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                     PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
         }
     }
+
 
     /**
      * Handles the result of the request for location permissions.
