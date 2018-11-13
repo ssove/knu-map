@@ -34,26 +34,20 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
     public Context mContext;
 
-    public static final int DEFAULT_POLYLINE_COLOR = Color.BLACK;
-    public static final int DEFAULT_POLYGON_STROKE_COLOR = Color.RED;
-    public static final int DEFAULT_POLYGON_FILL_COLOR = Color.RED;
-    public static final int DEFAULT_STROKE_WIDTH = 5;
-    public static final long TIME_INTERVAL_FOR_UPDATING_LOCATION = 1000; // ms
-    public static final float LEAST_DISTANCE_FOR_UPDATING_LOCATION = 1; // meter
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
     private GoogleMap mMap;
     private CameraPosition mCameraPosition;
 
-    // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
-    // not granted.
-    private final LatLng mDefaultLocation = new LatLng(35.890313, 128.611307); // coordinates of KNU
-    private static final int DEFAULT_ZOOM = 15;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-    private boolean mLocationPermissionGranted;
 
     // Keys for storing activity state.
     private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LOCATION = "location";
+
+    // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
+    // not granted.
+    private final LatLng mDefaultLocation = new LatLng(35.890313, 128.611307); // coordinates of KNU
+    private boolean mLocationPermissionGranted;
 
     private ArrayList<LatLng> locationList = new ArrayList<LatLng>();
     private Location mLastKnownLocation;
@@ -163,8 +157,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 // Request to update the location periodically.
                 lm.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER,
-                        TIME_INTERVAL_FOR_UPDATING_LOCATION,
-                        LEAST_DISTANCE_FOR_UPDATING_LOCATION,
+                        MapsConstants.TIME_INTERVAL_FOR_UPDATING_LOCATION,
+                        MapsConstants.LEAST_DISTANCE_FOR_UPDATING_LOCATION,
                         locationListener
                 );
 
@@ -173,7 +167,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         });
 
         // Move the camera to default location/zoom before getting the permission.
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, MapsConstants.DEFAULT_ZOOM));
 
         // Prompt the user for permission.
         getLocationPermission();
@@ -253,8 +247,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      */
     public PolylineOptions drawCapturingPolyline(LatLng last, LatLng current) {
         PolylineOptions polylineOptions = new PolylineOptions();
-        polylineOptions.width(DEFAULT_STROKE_WIDTH);
-        polylineOptions.color(DEFAULT_POLYLINE_COLOR);
+        polylineOptions.width(MapsConstants.DEFAULT_STROKE_WIDTH);
+        polylineOptions.color(MapsConstants.DEFAULT_POLYLINE_COLOR);
         polylineOptions.add(last);
         polylineOptions.add(current);
         mMap.addPolyline(polylineOptions);
@@ -269,9 +263,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     public PolygonOptions drawCapturedPolygon() {
         PolygonOptions polygonOptions = new PolygonOptions();
         polygonOptions.addAll(locationList);
-        polygonOptions.strokeWidth(DEFAULT_STROKE_WIDTH);
-        polygonOptions.strokeColor(DEFAULT_POLYGON_STROKE_COLOR);
-        polygonOptions.fillColor(DEFAULT_POLYGON_FILL_COLOR);
+        polygonOptions.strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH);
+        polygonOptions.strokeColor(MapsConstants.DEFAULT_POLYGON_STROKE_COLOR);
+        polygonOptions.fillColor(MapsConstants.DEFAULT_POLYGON_FILL_COLOR);
         mMap.addPolygon(polygonOptions);
 
         return polygonOptions;
