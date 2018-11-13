@@ -52,7 +52,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private ArrayList<LatLng> locationList = new ArrayList<LatLng>();
     private Location mLastKnownLocation;
     private LocationListener locationListener = new LocationListener() {
-        LatLng latLng;
+        LatLng current;
+        LatLng last;
         Marker marker = null;
 
         @Override
@@ -62,9 +63,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
              * parameter location : the changed location
              */
 
-            latLng = new LatLng(location.getLatitude(), location.getLongitude());
-            locationList.add(latLng);
-            mLastKnownLocation = location;
+            current = new LatLng(location.getLatitude(), location.getLongitude());
+
+            locationList.add(current);
 
             // Remove the existing marker.
             if (marker != null) {
@@ -72,11 +73,16 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
             }
 
             // Set the new marker.
-            MarkerOptions mMarkerOptions = new MarkerOptions().position(latLng);
+            MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
             marker = mMap.addMarker(mMarkerOptions);
 
             // Draw the polyline of movement.
-            drawCapturingPolyline();
+            if (last != null) {
+                drawCapturingPolyline(last, current);
+            }
+
+            mLastKnownLocation = location;
+            last = current;
         }
 
         @Override
@@ -237,10 +243,11 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     /**
      * Makes polyline with the movement of device.
      */
-    public void drawCapturingPolyline() {
+    public void drawCapturingPolyline(LatLng last, LatLng current) {
         PolylineOptions polylineOptions = new PolylineOptions();
         polylineOptions.width(7);
-        polylineOptions.addAll(locationList);
+        polylineOptions.add(last);
+        polylineOptions.add(current);
         mMap.addPolyline(polylineOptions);
     }
 }
