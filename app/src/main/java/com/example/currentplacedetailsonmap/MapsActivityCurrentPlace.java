@@ -2,6 +2,7 @@ package com.example.currentplacedetailsonmap;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,6 +21,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
@@ -32,6 +34,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
     public Context mContext;
 
+    public static final int DEFAULT_POLYLINE_COLOR = Color.BLACK;
+    public static final int DEFAULT_POLYGON_STROKE_COLOR = Color.RED;
+    public static final int DEFAULT_POLYGON_FILL_COLOR = Color.RED;
+    public static final int DEFAULT_STROKE_WIDTH = 5;
     public static final long TIME_INTERVAL_FOR_UPDATING_LOCATION = 1000; // ms
     public static final float LEAST_DISTANCE_FOR_UPDATING_LOCATION = 1; // meter
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
@@ -79,6 +85,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
             // Draw the polyline of movement.
             if (last != null) {
                 drawCapturingPolyline(last, current);
+                drawCapturedPolygon();
             }
 
             mLastKnownLocation = location;
@@ -241,13 +248,32 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     }
 
     /**
-     * Makes polyline with the movement of device.
+     * Draws polyline with the movement of device.
+     * Returns the drawn polyline.
      */
-    public void drawCapturingPolyline(LatLng last, LatLng current) {
+    public PolylineOptions drawCapturingPolyline(LatLng last, LatLng current) {
         PolylineOptions polylineOptions = new PolylineOptions();
-        polylineOptions.width(7);
+        polylineOptions.width(DEFAULT_STROKE_WIDTH);
+        polylineOptions.color(DEFAULT_POLYLINE_COLOR);
         polylineOptions.add(last);
         polylineOptions.add(current);
         mMap.addPolyline(polylineOptions);
+
+        return polylineOptions;
+    }
+
+    /**
+     * Draws polygon with the list of polylines.
+     * Returns the drawn polygon.
+     */
+    public PolygonOptions drawCapturedPolygon() {
+        PolygonOptions polygonOptions = new PolygonOptions();
+        polygonOptions.addAll(locationList);
+        polygonOptions.strokeWidth(DEFAULT_STROKE_WIDTH);
+        polygonOptions.strokeColor(DEFAULT_POLYGON_STROKE_COLOR);
+        polygonOptions.fillColor(DEFAULT_POLYGON_FILL_COLOR);
+        mMap.addPolygon(polygonOptions);
+
+        return polygonOptions;
     }
 }
