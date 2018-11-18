@@ -65,6 +65,30 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
             current = new LatLng(location.getLatitude(), location.getLongitude());
 
+            /**
+             * if (Cycle is detected):
+             *      drawCapturedPolygon()
+             *      reset locationList
+             * else if (Collision is detected):
+             *      reset locationList
+             */
+            if (!locationList.isEmpty()
+                    && locationList.size() >= 1
+                    && current.latitude == locationList.get(0).latitude
+                    && current.longitude == locationList.get(0).longitude) {
+                /**
+                 * User selects color and name of polygon.
+                 */
+                mMap.clear();
+                drawCapturedPolygon();
+                locationList = new ArrayList<LatLng>();
+                last = null;
+            } else if (locationList.contains(current)) {
+                mMap.clear();
+                locationList = new ArrayList<LatLng>();
+                last = null;
+            }
+
             locationList.add(current);
 
             // Remove the existing marker.
@@ -78,8 +102,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
             // Draw the polyline of movement.
             if (last != null) {
-                drawCapturingPolyline(last, current);
-                drawCapturedPolygon();
+                drawCapturingPolyline(last,current);
+                //drawCapturedPolygon();
             }
 
             mLastKnownLocation = location;
