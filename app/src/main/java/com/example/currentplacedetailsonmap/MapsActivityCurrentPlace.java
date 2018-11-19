@@ -21,7 +21,9 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
@@ -102,7 +104,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
             // Draw the polyline of movement.
             if (last != null) {
-                drawCapturingPolyline(last,current);
+                drawCapturingPolyline(last, current);
                 //drawCapturedPolygon();
             }
 
@@ -269,29 +271,28 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      * Draws polyline with the movement of device.
      * Returns the drawn polyline.
      */
-    public PolylineOptions drawCapturingPolyline(LatLng last, LatLng current) {
-        PolylineOptions polylineOptions = new PolylineOptions();
-        polylineOptions.width(MapsConstants.DEFAULT_STROKE_WIDTH);
-        polylineOptions.color(MapsConstants.DEFAULT_POLYLINE_COLOR);
-        polylineOptions.add(last);
-        polylineOptions.add(current);
-        mMap.addPolyline(polylineOptions);
+    public Polyline drawCapturingPolyline(LatLng last, LatLng current) {
+        Polyline polyline = mMap.addPolyline(new PolylineOptions()
+                .width(MapsConstants.DEFAULT_STROKE_WIDTH)
+                .color(MapsConstants.DEFAULT_POLYLINE_COLOR)
+                .add(last)
+                .add(current));
 
-        return polylineOptions;
+        return polyline;
     }
 
     /**
      * Draws polygon with the list of polylines.
      * Returns the drawn polygon.
      */
-    public PolygonOptions drawCapturedPolygon() {
-        PolygonOptions polygonOptions = new PolygonOptions();
-        polygonOptions.addAll(locationList);
-        polygonOptions.strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH);
-        polygonOptions.strokeColor(MapsConstants.DEFAULT_POLYGON_STROKE_COLOR);
-        polygonOptions.fillColor(MapsConstants.DEFAULT_POLYGON_FILL_COLOR);
-        mMap.addPolygon(polygonOptions);
+    public Polygon drawCapturedPolygon() {
+        Polygon polygon = mMap.addPolygon(new PolygonOptions()
+                .addAll(locationList)
+                .strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH)
+                .strokeColor(MapsConstants.DEFAULT_POLYGON_STROKE_COLOR)
+                .fillColor(MapsConstants.DEFAULT_POLYGON_FILL_COLOR)
+                .clickable(true));
 
-        return polygonOptions;
+        return polygon;
     }
 }

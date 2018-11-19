@@ -1,5 +1,8 @@
 package com.example.currentplacedetailsonmap;
 
+/**
+ * A class used to represent each Polygon.
+ */
 public class PolygonTag {
     private String polygonName = "Area";
     private String userName;
