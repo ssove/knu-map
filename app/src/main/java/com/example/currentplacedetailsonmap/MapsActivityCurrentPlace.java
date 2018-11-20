@@ -34,6 +34,7 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * An activity that displays a map showing the place at the device's current location.
@@ -56,6 +57,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LOCATION = "location";
 
+    private List<LatLng> LastPolygonLatLangList;
+
     // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
     // not granted.
     private final LatLng mDefaultLocation = new LatLng(35.890313, 128.611307); // coordinates of KNU
@@ -70,6 +73,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
         @Override
         public void onLocationChanged(Location location) {
+            String TAG = "onLocationChanged";
             /**
              * Triggered when the device location is changed.
              * parameter location : the changed location
@@ -85,7 +89,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
              *      reset locationList
              */
             if (!locationList.isEmpty()
-                    && locationList.size() >= 1
+                    && locationList.size() >= 3
                     && current.latitude == locationList.get(0).latitude
                     && current.longitude == locationList.get(0).longitude) {
                 /**
@@ -93,6 +97,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                  */
                 //setAreaName();
                 makeArea();
+                if(LastPolygonLatLangList != null)
+                    Log.e(TAG,LastPolygonLatLangList.toString());
+                else
+                    Log.e(TAG,"LastPolygon variable is null");
                 last=null;
             } else if (locationList.contains(current)) {
                 mMap.clear();
@@ -294,7 +302,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      * Draws polygon with the list of polylines.
      * Returns the drawn polygon.
      */
-    public Polygon drawCapturedPolygon(String areaname, int color) {
+    public final Polygon drawCapturedPolygon(String areaname, int color) {
         if(color == 0){
             color = 0xaaff0000;
         } else if (color == 1) {
@@ -350,6 +358,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     }
 
     public void setAreaColor(final String areaname) {
+        final String TAG = "Polygon LatLang list";
+
         AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivityCurrentPlace.this);
         builder.setTitle("Choose Colors")
                 .setSingleChoiceItems(colors,-1, new DialogInterface.OnClickListener() {
@@ -364,7 +374,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                     public void onClick(DialogInterface dialog, int which) {
                             Toast.makeText(getApplicationContext(),  String.valueOf(selectedColor) + colors[selectedColor] +" Selected\n", Toast.LENGTH_SHORT).show();
                             mMap.clear();
-                        drawCapturedPolygon(areaname, selectedColor);
+                            LastPolygonLatLangList = drawCapturedPolygon(areaname, selectedColor).getPoints();
+                        Log.e(TAG,LastPolygonLatLangList.toString());
                     }
                 });
         //Creating dialog box
