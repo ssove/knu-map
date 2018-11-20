@@ -1,6 +1,7 @@
 package com.example.currentplacedetailsonmap;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -10,8 +11,14 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -35,6 +42,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         implements OnMapReadyCallback {
 
     public Context mContext;
+
+    CharSequence[] colors = { "Red", "Bule", "Yellow", "Green", "Gray" };
+    int selectedColor = -1;
 
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
     private GoogleMap mMap;
@@ -81,10 +91,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 /**
                  * User selects color and name of polygon.
                  */
-                mMap.clear();
-                drawCapturedPolygon();
-                locationList = new ArrayList<LatLng>();
-                last = null;
+                //setAreaName();
+                makeArea();
+                last=null;
             } else if (locationList.contains(current)) {
                 mMap.clear();
                 locationList = new ArrayList<LatLng>();
@@ -285,14 +294,81 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      * Draws polygon with the list of polylines.
      * Returns the drawn polygon.
      */
-    public Polygon drawCapturedPolygon() {
+    public Polygon drawCapturedPolygon(String areaname, int color) {
+        if(color == 0){
+            color = 0xaaff0000;
+        } else if (color == 1) {
+            color = 0xaa0000ff;
+        } else if (color == 2) {
+            color = 0xaaffff00;
+        } else if (color == 3) {
+            color = 0xaa00ff00;
+        } else if (color == 4) {
+            color = 0xaa808080;
+        }
+
         Polygon polygon = mMap.addPolygon(new PolygonOptions()
                 .addAll(locationList)
                 .strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH)
-                .strokeColor(MapsConstants.DEFAULT_POLYGON_STROKE_COLOR)
-                .fillColor(MapsConstants.DEFAULT_POLYGON_FILL_COLOR)
+                .strokeColor(color)
+                .fillColor(color)
                 .clickable(true));
-
+        polygon.setTag(areaname);
+        Log.e("Create Polygon",areaname);
+        locationList = new ArrayList<LatLng>();
+        locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
         return polygon;
+    }
+
+    public void makeArea() {
+        setAreaName();
+    }
+
+    public void setAreaName() {
+        LayoutInflater layoutinflater = LayoutInflater.from(MapsActivityCurrentPlace.this);
+        View promptUserView = layoutinflater.inflate(R.layout.dialog_prompt_area, null);
+
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivityCurrentPlace.this);
+
+        alertDialogBuilder.setView(promptUserView);
+
+        final EditText userAnswer = (EditText) promptUserView.findViewById(R.id.areaname);
+
+        alertDialogBuilder.setTitle("Input Area name");
+
+        // prompt for username
+        alertDialogBuilder.setPositiveButton("Ok",new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // and display the username on main activity layout
+                setAreaColor(userAnswer.getText().toString());
+            }
+        });
+
+        // all set and time to build and show up!
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
+
+    public void setAreaColor(final String areaname) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivityCurrentPlace.this);
+        builder.setTitle("Choose Colors")
+                .setSingleChoiceItems(colors,-1, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        selectedColor = i;
+                    }
+                })
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                            Toast.makeText(getApplicationContext(),  String.valueOf(selectedColor) + colors[selectedColor] +" Selected\n", Toast.LENGTH_SHORT).show();
+                            mMap.clear();
+                        drawCapturedPolygon(areaname, selectedColor);
+                    }
+                });
+        //Creating dialog box
+        AlertDialog dialog  = builder.create();
+        dialog.show();
     }
 }
