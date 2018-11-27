@@ -1,12 +1,15 @@
 package com.example.currentplacedetailsonmap;
 
 import android.os.AsyncTask;
+import android.os.Build;
+import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,19 +33,46 @@ public class HttpAsyncTask
     private String action;
     private String path;
     private Type typeToken;
-    private MyCallBack callback;
+    private MyCallBack callBack;
     private JSONObject requestBodyJson;
     private File file;
 
+    public HttpAsyncTask() {}
 
-    public HttpAsyncTask(String action, String path, JSONObject requestBodyJson,Type typeToken,
-                         MyCallBack callback) {
-        this.action = action;
-        this.path = path;
-        this.requestBodyJson = requestBodyJson;
-        this.file = null;
-        this.typeToken = typeToken;
-        this.callback = callback;
+    public static class Builder {
+        // Essential parameter
+        private final String action;
+        private final String path;
+        private final Type typeToken;
+        private final MyCallBack callBack;
+
+        // Selective parameter
+        private JSONObject requestBodyJson = null;
+
+        public Builder(String action, String path, Type typeToken,
+                       MyCallBack callBack) {
+            this.action = action;
+            this.path = path;
+            this.typeToken = typeToken;
+            this.callBack = callBack;
+        }
+
+        public Builder requestBodyJson(JSONObject requestBodyJson) {
+            this.requestBodyJson = requestBodyJson;
+            return this;
+        }
+
+        public HttpAsyncTask build() {
+            return new HttpAsyncTask(this);
+        }
+    }
+
+    private HttpAsyncTask(Builder builder) {
+        this.action = builder.action;
+        this.path = builder.path;
+        this.typeToken = builder.typeToken;
+        this.callBack = builder.callBack;
+        this.requestBodyJson = builder.requestBodyJson;
     }
 
     public String getAction() {
@@ -72,32 +102,10 @@ public class HttpAsyncTask
             Request request = null;
             RequestBody requestBody = null;
 
-            if(this.file != null){
-                MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("image", file.getName(), RequestBody.create(MultipartBody.FORM, file));
-
-                Iterator<String> keys = requestBodyJson.keys();
-                while(keys.hasNext()){
-                    String key = keys.next();
-                    try{
-                        String multiValueStr = "";
-                        for(int i=0; i<requestBodyJson.getJSONArray(key).length(); i++){
-                            multiValueStr += requestBodyJson.getJSONArray(key).get(i) + ",";
-                        }
-                        bodyBuilder.addFormDataPart(key, multiValueStr);
-                    }catch (JSONException e){
-                        bodyBuilder.addFormDataPart(key, requestBodyJson.getString(key));
-                    }
-                }
-
-                requestBody = bodyBuilder.build();
-            }else if(this.requestBodyJson != null){
+            if(this.requestBodyJson != null){
                 MediaType JSON = MediaType.parse("application/json; charset=utf-8");
                 requestBody = MultipartBody.create(JSON, requestBodyJson.toString());
             }
-
-
 
             if(this.action.equalsIgnoreCase("GET")){ //GET, 대소문자 상관X
                 // 요청
@@ -144,11 +152,52 @@ public class HttpAsyncTask
     protected void onPostExecute(ResultBody resultBody) {
         super.onPostExecute(resultBody);
 
-        this.callback.doTask(resultBody);
+        this.callBack.doTask(resultBody);
     }
 
     @Override
     public Object deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         return null;
     }
+
+    /*
+     * EXAMPLE FOR MAKING HttpAsyncTask
+     *
+     * 1. GET polylines
+     *
+     * HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "users", new TypeToken<ResultBody<Polygon>>() {
+            }.getType(),
+                    new MyCallBack() {
+                        @Override
+                        public void doTask(Object resultBody) {
+                            ResultBody<Polygon> result = (ResultBody<Polygon>) resultBody;
+                            Log.d("# of Polygon", result.getSize());
+                            for (Polygon p : result.getDatas()) {
+                                PolygonTag polygonTag = (PolygonTag) p.getTag();
+                                Log.d("name of Polygon", polygonTag.getPolygonName());
+                            }}})
+                    .build();
+     *
+     *      task.execute();
+     *
+     *
+     * 2. POST polylines
+     *
+     * HttpAsyncTask task = new HttpAsyncTask.Builder("POST", "users", new TypeToken<ResultBody<Polyline>>() {
+     *      }.getType(),
+                    new MyCallBack() {
+                        @Override
+                        public void doTask(Object resultBody) {
+                            ResultBody<Polyline> result = (ResultBody<Polyline>) resultBody;
+                            Log.d("# of Polygon", result.getSize());
+                            for (Polyline p : result.getDatas()) {
+                                PolygonTag polygonTag = (PolygonTag) p.getTag();
+                                Log.d("name of Polygon", polygonTag.getPolygonName());
+                            }}})
+                    .requestBodyJson(requestBody) // POST requires a requestBodyJson.
+                    .build();
+     *
+     *      task.execute();
+     *
+     */
 }
