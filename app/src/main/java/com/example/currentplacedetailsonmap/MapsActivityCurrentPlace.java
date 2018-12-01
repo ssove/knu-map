@@ -18,6 +18,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -47,6 +48,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     CharSequence[] colors = { "Red", "Bule", "Yellow", "Green", "Gray" };
     int selectedColor = -1;
 
+    private boolean isDigging=false;
+    private Marker marker = null;
+
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
     private GoogleMap mMap;
     private CameraPosition mCameraPosition;
@@ -69,7 +73,6 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private LocationListener locationListener = new LocationListener() {
         LatLng current;
         LatLng last;
-        Marker marker = null;
 
         @Override
         public void onLocationChanged(Location location) {
@@ -88,45 +91,50 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
              * else if (Collision is detected):
              *      reset locationList
              */
-            if (!locationList.isEmpty()
-                    && locationList.size() >= 3
-                    && current.latitude == locationList.get(0).latitude
-                    && current.longitude == locationList.get(0).longitude) {
-                /**
-                 * User selects color and name of polygon.
-                 */
-                //setAreaName();
-                makeArea();
-                if(LastPolygonLatLangList != null)
-                    Log.e(TAG,LastPolygonLatLangList.toString());
-                else
-                    Log.e(TAG,"LastPolygon variable is null");
-                last=null;
-            } else if (locationList.contains(current)) {
-                mMap.clear();
-                locationList = new ArrayList<LatLng>();
-                last = null;
+            if(isDigging) {
+                if (locationList.size()==1) {
+                    last=locationList.get(0);
+                }
+                if (!locationList.isEmpty()
+                        && locationList.size() >= 3
+                        && current.latitude == locationList.get(0).latitude
+                        && current.longitude == locationList.get(0).longitude) {
+                    /**
+                     * User selects color and name of polygon.
+                     */
+                    //setAreaName();
+                    makeArea();
+                    if (LastPolygonLatLangList != null)
+                        Log.e(TAG, LastPolygonLatLangList.toString());
+                    else
+                        Log.e(TAG, "LastPolygon variable is null");
+                    last = null;
+                } else if (locationList.contains(current)) {
+                    mMap.clear();
+                    locationList = new ArrayList<LatLng>();
+                    last = null;
+                }
+
+                locationList.add(current);
+
+                // Remove the existing marker.
+                if (marker != null) {
+                    marker.remove();
+                }
+
+                // Set the new marker.
+                MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
+                marker = mMap.addMarker(mMarkerOptions);
+
+                // Draw the polyline of movement.
+                if (last != null) {
+                    drawCapturingPolyline(last, current);
+                    //drawCapturedPolygon();
+                }
+
+                last = current;
             }
-
-            locationList.add(current);
-
-            // Remove the existing marker.
-            if (marker != null) {
-                marker.remove();
-            }
-
-            // Set the new marker.
-            MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
-            marker = mMap.addMarker(mMarkerOptions);
-
-            // Draw the polyline of movement.
-            if (last != null) {
-                drawCapturingPolyline(last, current);
-                //drawCapturedPolygon();
-            }
-
             mLastKnownLocation = location;
-            last = current;
         }
 
         @Override
@@ -206,6 +214,64 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 );
 
                 return false;
+            }
+        });
+
+        LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        // Get the permissions.
+        if ((ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED)
+                && (ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED)) {
+        }
+
+        // Request to update the location periodically.
+        lm.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                MapsConstants.TIME_INTERVAL_FOR_UPDATING_LOCATION,
+                MapsConstants.LEAST_DISTANCE_FOR_UPDATING_LOCATION,
+                locationListener
+        );
+
+        Button startBtn=(Button)findViewById(R.id.start_btn);
+        startBtn.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                //status changed
+                isDigging=true;
+
+                LatLng current = new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude());
+                locationList.add(current);
+
+                // Set the new marker.
+                MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
+                marker = mMap.addMarker(mMarkerOptions);
+            }
+        });
+
+        mMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+            public void onPolygonClick(Polygon polygon) {
+                LayoutInflater layoutinflater = LayoutInflater.from(MapsActivityCurrentPlace.this);
+                View promptUserView = layoutinflater.inflate(R.layout.dialog_prompt_area_info, null);
+
+                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivityCurrentPlace.this);
+
+                alertDialogBuilder.setView(promptUserView);
+
+                final TextView tagField = (TextView) promptUserView.findViewById(R.id.tagView);
+                tagField.setText(String.valueOf(polygon.getTag()));
+                final TextView usernameField = (TextView) promptUserView.findViewById(R.id.usernameView);
+                usernameField.setText(String.valueOf("user"));
+
+                alertDialogBuilder.setTitle("Polygon Info");
+
+                // prompt for username
+                alertDialogBuilder.setPositiveButton("close",null);
+
+                // all set and time to build and show up!
+                AlertDialog alertDialog = alertDialogBuilder.create();
+                alertDialog.show();
             }
         });
 
@@ -303,6 +369,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      * Returns the drawn polygon.
      */
     public final Polygon drawCapturedPolygon(String areaname, int color) {
+        isDigging=false;
         if(color == 0){
             color = 0xaaff0000;
         } else if (color == 1) {
@@ -319,12 +386,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .addAll(locationList)
                 .strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH)
                 .strokeColor(color)
-                .fillColor(color)
-                .clickable(true));
+                .fillColor(color));
         polygon.setTag(areaname);
+        polygon.setClickable(true);
         Log.e("Create Polygon",areaname);
         locationList = new ArrayList<LatLng>();
-        locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+        //locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
         return polygon;
     }
 
