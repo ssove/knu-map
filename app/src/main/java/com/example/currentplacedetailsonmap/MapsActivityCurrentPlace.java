@@ -55,7 +55,6 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private GoogleMap mMap;
     private CameraPosition mCameraPosition;
     private Polygon polygon = null;
-    private Semaphore semaphore = new Semaphore(0);
 
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
 
@@ -420,8 +419,6 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                         mMap.clear();
                         polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
                         Log.e("polygon information",polygon.getPoints().toString());
-                        semaphore.release();
-                        Log.e("semaphore",String.valueOf(semaphore.availablePermits()));
                     }
                 });
 
