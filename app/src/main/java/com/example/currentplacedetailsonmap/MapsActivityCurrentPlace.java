@@ -3,7 +3,6 @@ package com.example.currentplacedetailsonmap;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -35,10 +34,14 @@ import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Semaphore;
 
 /**
  * An activity that displays a map showing the place at the device's current location.
@@ -48,6 +51,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
     public Context mContext;
 
+    private String userName = "userName";
     private boolean isDigging=false;
     private Marker marker = null;
 
@@ -92,8 +96,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
              * else if (Collision is detected):
              *      reset locationList
              */
-            if(isDigging) {
-                if (locationList.size()==1) {
+            if (isDigging) {
+                if (locationList.size() == 1) {
                     last=locationList.get(0);
                 }
                 if (!locationList.isEmpty()
@@ -235,12 +239,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 locationListener
         );
 
-        Button startBtn=(Button)findViewById(R.id.start_btn);
-        startBtn.setOnClickListener(new View.OnClickListener(){
+        Button startBtn = (Button) findViewById(R.id.start_btn);
+        startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //status changed
-                isDigging=true;
+                isDigging = true;
 
                 LatLng current = new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude());
                 locationList.add(current);
@@ -369,10 +373,11 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
      * Draws polygon with the list of polylines.
      * Returns the drawn polygon.
      */
-    public final Polygon drawCapturedPolygon(String areaname, String color) {
-        isDigging=false;
-        int color_int=0;
-        if(color.equals("Red")){
+    public final Polygon drawCapturedPolygon(String areaName, String color) {
+        isDigging = false;
+        int color_int = 0;
+
+        if (color.equals("Red")){
             color_int = 0xaaff0000;
         } else if (color.equals("Blue")) {
             color_int = 0xaa0000ff;
@@ -389,11 +394,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH)
                 .strokeColor(color_int)
                 .fillColor(color_int));
-        polygon.setTag(areaname);
+        polygon.setTag(areaName);
         polygon.setClickable(true);
-        Log.e("Create Polygon",areaname);
+        Log.e("Create Polygon", areaName);
         locationList = new ArrayList<LatLng>();
         //locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+
         return polygon;
     }
 
@@ -405,7 +411,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
         alertDialogBuilder.setView(promptUserView);
 
-        final EditText userAnswer = (EditText) promptUserView.findViewById(R.id.areaname);
+        final EditText userAnswer = (EditText) promptUserView.findViewById(R.id.areaName);
         final RadioGroup rg = (RadioGroup) promptUserView.findViewById(R.id.radioGroup);
 
 
@@ -414,11 +420,51 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .setPositiveButton("Ok",new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         int rg_id = rg.getCheckedRadioButtonId();
+                        JSONObject requestBody = new JSONObject();
+                        JSONObject tag = new JSONObject();
+                        JSONArray pos = new JSONArray();
+                        JSONObject l = new JSONObject();
+                        String polygonTag;
                         RadioButton rb = (RadioButton) promptUserView.findViewById(rg_id);
+
                         Toast.makeText(getApplicationContext(),  userAnswer.getText().toString() + ", " + rb.getText().toString(), Toast.LENGTH_SHORT).show();
                         mMap.clear();
                         polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
-                        Log.e("polygon information",polygon.getPoints().toString());
+                        polygonTag = (String) polygon.getTag();
+                        Log.e("Polygon points", polygon.getPoints().toString());
+                        Log.e("Polygon name", polygonTag);
+
+                        // Construct JSONObject to request to server.
+                        try {
+                            tag
+                                    .put("polygon_name", polygonTag)
+                                    .put("user_name", userName);
+
+                            for (LatLng location : locationList) {
+                                l
+                                        .put("latitude", location.latitude)
+                                        .put("longitude", location.longitude);
+                                pos
+                                        .put(l);
+                            }
+                            requestBody
+                                    .put("tag", tag)
+                                    .put("color", polygon.getFillColor())
+                                    .put("pos", pos);
+
+                        } catch (JSONException e) {
+                            Log.e("JSONObject : ", "error while constructing" + e.getMessage());
+                        }
+
+                        // POST the constructed JSONObject.
+                        HttpAsyncTask task = new HttpAsyncTask.Builder("POST", "polygons", new TypeToken<ResultBody<Polygon>>() {
+                        }.getType(),
+                                new MyCallBack() {
+                                    @Override
+                                    public void doTask(Object resultBody) {}})
+                                .requestBodyJson(requestBody) // POST requires a requestBodyJson.
+                                .build();
+                        task.execute();
                     }
                 });
 
