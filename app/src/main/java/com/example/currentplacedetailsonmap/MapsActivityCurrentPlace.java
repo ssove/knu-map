@@ -34,11 +34,6 @@ import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.gson.reflect.TypeToken;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +47,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     public Context mContext;
 
     private String userName = "userName";
-    private boolean isDigging=false;
+    private boolean isDigging = false;
     private Marker marker = null;
 
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
@@ -66,7 +61,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LOCATION = "location";
 
-    private List<LatLng> LastPolygonLatLangList;
+    private List<LatLng> LastPolygonLatLngList;
 
     // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
     // not granted.
@@ -78,10 +73,11 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private LocationListener locationListener = new LocationListener() {
         LatLng current;
         LatLng last;
+        String TAG = "onLocationChanged";
+        Polyline polyline;
 
         @Override
         public void onLocationChanged(Location location) {
-            String TAG = "onLocationChanged";
             /**
              * Triggered when the device location is changed.
              * parameter location : the changed location
@@ -108,9 +104,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                      * User selects color and name of polygon.
                      */
                     makeArea();
-                    Log.e("finish makeArea","abc");
-                    if (LastPolygonLatLangList != null)
-                        Log.e(TAG, LastPolygonLatLangList.toString());
+                    Log.i("Finish makeArea()","");
+
+                    if (LastPolygonLatLngList != null)
+                        Log.e(TAG, LastPolygonLatLngList.toString());
                     else
                         Log.e(TAG, "LastPolygon variable is null");
                     last = null;
@@ -131,10 +128,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
                 marker = mMap.addMarker(mMarkerOptions);
 
-                // Draw the polyline of movement.
+                // Draw and post the polyline.
                 if (last != null) {
-                    drawCapturingPolyline(last, current);
-                    //drawCapturedPolygon();
+                    polyline = drawCapturingPolyline(last, current);
+                    RESTAPI.postPolylineToServer(polyline);
                 }
 
                 last = current;
@@ -146,10 +143,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         public void onProviderDisabled(String provider) {
 
         }
+
         @Override
         public void onProviderEnabled(String provider) {
 
         }
+
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
 
@@ -351,9 +350,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 getLocationPermission();
             }
         } catch (SecurityException e)  {
-            Log.e("Exception: %s", e.getMessage());
+            Log.w("Exception", e.getMessage());
         }
     }
+
 
     /**
      * Draws polyline with the movement of device.
@@ -368,6 +368,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
         return polyline;
     }
+
 
     /**
      * Draws polygon with the list of polylines.
@@ -396,12 +397,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .fillColor(color_int));
         polygon.setTag(areaName);
         polygon.setClickable(true);
-        Log.e("Create Polygon", areaName);
+        Log.i("Create Polygon", areaName);
         locationList = new ArrayList<LatLng>();
-        //locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
 
         return polygon;
     }
+
 
     public void makeArea() {
         LayoutInflater layoutinflater = LayoutInflater.from(MapsActivityCurrentPlace.this);
@@ -418,60 +419,20 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         alertDialogBuilder.setTitle("Input information")
                 .setCancelable(false)
                 .setPositiveButton("Ok",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        int rg_id = rg.getCheckedRadioButtonId();
-                        JSONObject requestBody = new JSONObject();
-                        JSONObject tag = new JSONObject();
-                        JSONArray pos = new JSONArray();
-                        JSONObject l = new JSONObject();
-                        String polygonTag;
-                        RadioButton rb = (RadioButton) promptUserView.findViewById(rg_id);
+                            public void onClick(DialogInterface dialog, int id) {
+                                int rg_id = rg.getCheckedRadioButtonId();
+                                RadioButton rb = (RadioButton) promptUserView.findViewById(rg_id);
 
-                        Toast.makeText(getApplicationContext(),  userAnswer.getText().toString() + ", " + rb.getText().toString(), Toast.LENGTH_SHORT).show();
-                        mMap.clear();
-                        polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
-                        polygonTag = (String) polygon.getTag();
-                        Log.e("Polygon points", polygon.getPoints().toString());
-                        Log.e("Polygon name", polygonTag);
+                                Toast.makeText(getApplicationContext(), userAnswer.getText().toString() + ", " + rb.getText().toString(), Toast.LENGTH_SHORT).show();
+                                mMap.clear();
+                                polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
 
-                        // Construct JSONObject to request to server.
-                        try {
-                            tag
-                                    .put("polygon_name", polygonTag)
-                                    .put("user_name", userName);
-
-                            for (LatLng location : locationList) {
-                                l
-                                        .put("latitude", location.latitude)
-                                        .put("longitude", location.longitude);
-                                pos
-                                        .put(l);
+                                RESTAPI.postPolygonToServer(polygon);
                             }
-                            requestBody
-                                    .put("tag", tag)
-                                    .put("color", polygon.getFillColor())
-                                    .put("pos", pos);
-
-                        } catch (JSONException e) {
-                            Log.e("JSONObject : ", "error while constructing" + e.getMessage());
-                        }
-
-                        // POST the constructed JSONObject.
-                        HttpAsyncTask task = new HttpAsyncTask.Builder("POST", "polygons", new TypeToken<ResultBody<Polygon>>() {
-                        }.getType(),
-                                new MyCallBack() {
-                                    @Override
-                                    public void doTask(Object resultBody) {}})
-                                .requestBodyJson(requestBody) // POST requires a requestBodyJson.
-                                .build();
-                        task.execute();
-                    }
-                });
+                        });
 
         // all set and time to build and show up!
         AlertDialog alertDialog = alertDialogBuilder.create();
         alertDialog.show();
-
     }
-
 }

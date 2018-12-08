@@ -21,4 +21,5 @@ public class MapsConstants {
     // Default values of camera.
     public static final int DEFAULT_ZOOM = 15;
 
+    public static final String devisionLine = "==================================================================================================";
 }
