@@ -11,6 +11,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 public class RESTAPI {
     public static String userName = "userName";
 
@@ -90,7 +92,7 @@ public class RESTAPI {
                     .put("pos", pos);
 
         } catch (JSONException e) {
-            Log.e("JSONObject : ", "error while constructing polyline JSONObject" + e.getMessage());
+            Log.e("postPolylineToServer()", "error while constructing polyline JSONObject" + e.getMessage());
         }
 
         // POST the constructed JSONObject.
@@ -105,5 +107,21 @@ public class RESTAPI {
 
         task.execute();
         Log.i("End posting a polyline", MapsConstants.devisionLine);
+    }
+
+    public static ArrayList<Polygon> getPolygonsFromServer() {
+        ArrayList<Polygon> polygonList = new ArrayList<>();
+
+        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polygons", new TypeToken<ResultBody<Polygon>>() {
+        }.getType(),
+                new MyCallBack() {
+                    @Override
+                    public void doTask(Object resultBody) {}
+                })
+                .build();
+
+        task.execute();
+
+        return polygonList;
     }
 }
