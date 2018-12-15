@@ -16,6 +16,9 @@ import java.util.ArrayList;
 public class RESTAPI {
     public static String userName = "userName";
 
+    private static ArrayList<Polygon> polygonList = new ArrayList<>();
+    private static ArrayList<Polyline> polylineList = new ArrayList<>();
+
 
     public static void postPolygonToServer(Polygon polygon) {
         JSONObject requestBody = new JSONObject();
@@ -109,19 +112,43 @@ public class RESTAPI {
         Log.i("End posting a polyline", MapsConstants.devisionLine);
     }
 
-    public static ArrayList<Polygon> getPolygonsFromServer() {
-        ArrayList<Polygon> polygonList = new ArrayList<>();
 
+    public static void getPolygonsFromServer() {
         HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polygons", new TypeToken<ResultBody<Polygon>>() {
         }.getType(),
                 new MyCallBack() {
                     @Override
-                    public void doTask(Object resultBody) {}
+                    public void doTask(Object resultBody) {
+                        ResultBody<Polygon> result = (ResultBody<Polygon>) resultBody;
+
+                        polygonList.addAll(result.getDatas());
+                        for (int i = 0; i < polygonList.size(); i++) {
+                            Log.i("GET polygons", polygonList.get(i).getId());
+                        }
+                    }
                 })
                 .build();
 
         task.execute();
+    }
 
-        return polygonList;
+
+    public static void getPolylinesFromServer() {
+        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polylines", new TypeToken<ResultBody<Polygon>>() {
+        }.getType(),
+                new MyCallBack() {
+                    @Override
+                    public void doTask(Object resultBody) {
+                        ResultBody<Polyline> result = (ResultBody<Polyline>) resultBody;
+
+                        polylineList.addAll(result.getDatas());
+                        for (int i = 0; i < polylineList.size(); i++) {
+                            Log.i("GET polylines", polylineList.get(i).getId());
+                        }
+                    }
+                })
+                .build();
+
+        task.execute();
     }
 }
