@@ -1,23 +1,18 @@
 package com.example.currentplacedetailsonmap;
 
 import android.os.AsyncTask;
-import android.os.Build;
-import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import com.google.gson.reflect.TypeToken;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Iterator;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -98,29 +93,30 @@ public class HttpAsyncTask
         String strUrl = this.url + this.path;
         ResultBody resultBody = null;
 
+
         try {
             Request request = null;
             RequestBody requestBody = null;
 
-            if(this.requestBodyJson != null){
+            if (this.requestBodyJson != null){
                 MediaType JSON = MediaType.parse("application/json; charset=utf-8");
                 requestBody = MultipartBody.create(JSON, requestBodyJson.toString());
             }
 
-            if(this.action.equalsIgnoreCase("GET")){ //GET, 대소문자 상관X
+            if (this.action.equalsIgnoreCase("GET")) { //GET, 대소문자 상관X
                 // 요청
                 request = new Request.Builder()
                         .url(strUrl)
                         .build();
             }
-            else if(this.action.equalsIgnoreCase("POST")){
+            else if (this.action.equalsIgnoreCase("POST")) {
                 request = new Request.Builder()
                         .url(strUrl)
                         .post(requestBody)
                         .build();
             }
 
-            else if(this.action.equalsIgnoreCase("PUT")){
+            else if (this.action.equalsIgnoreCase("PUT")) {
                 request = new Request.Builder()
                         .url(strUrl)
                         .put(requestBody)

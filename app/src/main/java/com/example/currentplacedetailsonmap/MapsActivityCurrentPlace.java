@@ -3,7 +3,6 @@ package com.example.currentplacedetailsonmap;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -38,7 +37,6 @@ import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Semaphore;
 
 /**
  * An activity that displays a map showing the place at the device's current location.
@@ -47,12 +45,13 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         implements OnMapReadyCallback {
 
     public Context mContext;
+    public GoogleMap mMap;
 
-    private boolean isDigging=false;
+    private String userName = "userName";
+    private boolean isDigging = false;
     private Marker marker = null;
 
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
-    private GoogleMap mMap;
     private CameraPosition mCameraPosition;
     private Polygon polygon = null;
 
@@ -62,7 +61,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LOCATION = "location";
 
-    private List<LatLng> LastPolygonLatLangList;
+    private List<LatLng> LastPolygonLatLngList;
 
     // A default location (Kyungpook National Univ.) and default zoom to use when location permission is
     // not granted.
@@ -74,10 +73,11 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     private LocationListener locationListener = new LocationListener() {
         LatLng current;
         LatLng last;
+        String TAG = "onLocationChanged";
+        Polyline polyline;
 
         @Override
         public void onLocationChanged(Location location) {
-            String TAG = "onLocationChanged";
             /**
              * Triggered when the device location is changed.
              * parameter location : the changed location
@@ -92,8 +92,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
              * else if (Collision is detected):
              *      reset locationList
              */
-            if(isDigging) {
-                if (locationList.size()==1) {
+            if (isDigging) {
+                if (locationList.size() == 1) {
                     last=locationList.get(0);
                 }
                 if (!locationList.isEmpty()
@@ -104,11 +104,13 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                      * User selects color and name of polygon.
                      */
                     makeArea();
-                    Log.e("finish makeArea","abc");
-                    if (LastPolygonLatLangList != null)
-                        Log.e(TAG, LastPolygonLatLangList.toString());
-                    else
+                    Log.i("Finish makeArea()","");
+
+                    if (LastPolygonLatLngList != null) {
+                        Log.e(TAG, LastPolygonLatLngList.toString());
+                    } else {
                         Log.e(TAG, "LastPolygon variable is null");
+                    }
                     last = null;
                 } else if (locationList.contains(current)) {
                     mMap.clear();
@@ -127,10 +129,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
                 marker = mMap.addMarker(mMarkerOptions);
 
-                // Draw the polyline of movement.
+                // Draw and post the polyline.
                 if (last != null) {
-                    drawCapturingPolyline(last, current);
-                    //drawCapturedPolygon();
+                    polyline = drawCapturingPolyline(last, current);
+                    RESTAPI.postPolylineToServer(polyline);
                 }
 
                 last = current;
@@ -142,10 +144,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         public void onProviderDisabled(String provider) {
 
         }
+
         @Override
         public void onProviderEnabled(String provider) {
 
         }
+
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
 
@@ -170,6 +174,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        RESTAPI.getPolylinesFromServer();
+        RESTAPI.getPolygonsFromServer();
     }
 
     /**
@@ -235,12 +241,12 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 locationListener
         );
 
-        Button startBtn=(Button)findViewById(R.id.start_btn);
-        startBtn.setOnClickListener(new View.OnClickListener(){
+        Button startBtn = (Button) findViewById(R.id.start_btn);
+        startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //status changed
-                isDigging=true;
+                isDigging = true;
 
                 LatLng current = new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude());
                 locationList.add(current);
@@ -248,6 +254,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 // Set the new marker.
                 MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
                 marker = mMap.addMarker(mMarkerOptions);
+
+                drawPolygonsSentFromServer();
+                drawPolylinesSentFromServer();
             }
         });
 
@@ -347,9 +356,10 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 getLocationPermission();
             }
         } catch (SecurityException e)  {
-            Log.e("Exception: %s", e.getMessage());
+            Log.w("Exception", e.getMessage());
         }
     }
+
 
     /**
      * Draws polyline with the movement of device.
@@ -362,17 +372,21 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .add(last)
                 .add(current));
 
+        RESTAPI.postPolylineToServer(polyline);
+
         return polyline;
     }
+
 
     /**
      * Draws polygon with the list of polylines.
      * Returns the drawn polygon.
      */
-    public final Polygon drawCapturedPolygon(String areaname, String color) {
-        isDigging=false;
-        int color_int=0;
-        if(color.equals("Red")){
+    public final Polygon drawCapturedPolygon(String areaName, String color) {
+        isDigging = false;
+        int color_int = 0;
+
+        if (color.equals("Red")){
             color_int = 0xaaff0000;
         } else if (color.equals("Blue")) {
             color_int = 0xaa0000ff;
@@ -389,13 +403,14 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH)
                 .strokeColor(color_int)
                 .fillColor(color_int));
-        polygon.setTag(areaname);
+        polygon.setTag(areaName);
         polygon.setClickable(true);
-        Log.e("Create Polygon",areaname);
+        Log.i("Create Polygon", areaName);
         locationList = new ArrayList<LatLng>();
-        //locationList.add(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+
         return polygon;
     }
+
 
     public void makeArea() {
         LayoutInflater layoutinflater = LayoutInflater.from(MapsActivityCurrentPlace.this);
@@ -405,27 +420,86 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
 
         alertDialogBuilder.setView(promptUserView);
 
-        final EditText userAnswer = (EditText) promptUserView.findViewById(R.id.areaname);
+        final EditText userAnswer = (EditText) promptUserView.findViewById(R.id.areaName);
         final RadioGroup rg = (RadioGroup) promptUserView.findViewById(R.id.radioGroup);
 
 
         alertDialogBuilder.setTitle("Input information")
                 .setCancelable(false)
                 .setPositiveButton("Ok",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        int rg_id = rg.getCheckedRadioButtonId();
-                        RadioButton rb = (RadioButton) promptUserView.findViewById(rg_id);
-                        Toast.makeText(getApplicationContext(),  userAnswer.getText().toString() + ", " + rb.getText().toString(), Toast.LENGTH_SHORT).show();
-                        mMap.clear();
-                        polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
-                        Log.e("polygon information",polygon.getPoints().toString());
-                    }
-                });
+                            public void onClick(DialogInterface dialog, int id) {
+                                int rg_id = rg.getCheckedRadioButtonId();
+                                RadioButton rb = (RadioButton) promptUserView.findViewById(rg_id);
+
+                                Toast.makeText(getApplicationContext(), userAnswer.getText().toString() + ", " + rb.getText().toString(), Toast.LENGTH_SHORT).show();
+                                mMap.clear();
+                                polygon = drawCapturedPolygon(userAnswer.getText().toString(), rb.getText().toString());
+
+                                RESTAPI.postPolygonToServer(polygon);
+                            }
+                        });
 
         // all set and time to build and show up!
         AlertDialog alertDialog = alertDialogBuilder.create();
         alertDialog.show();
-
     }
 
+
+    private void drawPolygonsSentFromServer() {
+        int myPolygonListSize = RESTAPI.myPolygonList.size();
+
+        Log.i("In main", ".");
+        Log.i("myPolygonListSize", Integer.toString(myPolygonListSize));
+
+        for (int i = 0; i < myPolygonListSize; i++) {
+            PolygonOptions polygonOptions = new PolygonOptions();
+            MyPolygon myPolygon = RESTAPI.myPolygonList.get(i);
+            int posSize = myPolygon.pos.size();
+            ArrayList<LatLng> latLngArrayList = new ArrayList<>();
+
+            Log.i("Caught myPolygon", myPolygon._id);
+            Log.i("posSize", Integer.toString(posSize));
+
+            for (int j = 0; j < posSize; j++) {
+                LatLng latLng = new LatLng(
+                        myPolygon.pos.get(j).latitude,
+                        myPolygon.pos.get(j).longitude);
+                latLngArrayList.add(latLng);
+            }
+
+            Log.i("latLngArrayListSize", Integer.toString(latLngArrayList.size()));
+            for (int k = 0; k < posSize; k++) {
+                Log.i("Lat " + Integer.toString(k), Double.toString(latLngArrayList.get(k).latitude));
+                Log.i("Lng " + Integer.toString(k), Double.toString(latLngArrayList.get(k).longitude));
+            }
+            polygonOptions.addAll(latLngArrayList);
+            polygonOptions.fillColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
+            polygonOptions.strokeColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
+            polygonOptions.strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH);
+
+            mMap.addPolygon(polygonOptions);
+            Log.i("Drawing Complete", myPolygon._id);
+        }
+    }
+
+
+    private void drawPolylinesSentFromServer() {
+        int myPolylineListSize = RESTAPI.myPolylineList.size();
+
+        Log.i("In main", ".");
+        Log.i("myPolylineListSize", Integer.toString(myPolylineListSize));
+
+        for (int i = 0; i < myPolylineListSize; i++) {
+            PolylineOptions polylineOptions = new PolylineOptions();
+            MyPolyline myPolyline = RESTAPI.myPolylineList.get(i);
+
+            polylineOptions.add(new LatLng(myPolyline.pos.get(0).latitude, myPolyline.pos.get(0).longitude));
+            polylineOptions.add(new LatLng(myPolyline.pos.get(1).latitude, myPolyline.pos.get(1).longitude));
+            polylineOptions.color(MapsConstants.DEFAULT_POLYLINE_COLOR);
+            polylineOptions.width(MapsConstants.DEFAULT_STROKE_WIDTH);
+
+            mMap.addPolyline(polylineOptions);
+            Log.i("Drawing Complete", polylineOptions.getPoints().toString());
+        }
+    }
 }
