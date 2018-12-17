@@ -16,14 +16,14 @@ import java.util.ArrayList;
 public class RESTAPI {
     public static String userName = "userName";
 
-    private static ArrayList<Polygon> polygonList = new ArrayList<>();
-    private static ArrayList<Polyline> polylineList = new ArrayList<>();
+    public static ArrayList<MyPolygon> myPolygonList = new ArrayList<>();
+    public static ArrayList<MyPolyline> myPolylineList = new ArrayList<>();
 
 
     public static void postPolygonToServer(Polygon polygon) {
         JSONObject requestBody = new JSONObject();
         JSONObject tag = new JSONObject();
-        JSONObject l = new JSONObject();
+
         JSONArray pos = new JSONArray();
         String polygonTag;
 
@@ -34,25 +34,24 @@ public class RESTAPI {
 
         // Construct JSONObject to request to server.
         try {
-            tag
-                    .put("polygon_name", polygonTag)
-                    .put("user_name", userName);
+            tag.put("polygon_name", polygonTag);
+            tag.put("user_name", userName);
 
             for (LatLng location : polygon.getPoints()) {
-                l
-                        .put("latitude", location.latitude)
-                        .put("longitude", location.longitude);
-                pos
-                        .put(l);
+                JSONObject l = new JSONObject();
+                l.put("latitude", location.latitude);
+                l.put("longitude", location.longitude);
+                pos.put(l);
             }
-            requestBody
-                    .put("tag", tag)
-                    .put("color", polygon.getFillColor())
-                    .put("pos", pos);
+            requestBody.put("tag", tag);
+            requestBody.put("color", polygon.getFillColor());
+            requestBody.put("pos", pos);
 
         } catch (JSONException e) {
             Log.e("JSONObject : ", "error while constructing polygon JSONObject" + e.getMessage());
         }
+
+        Log.d("json", requestBody.toString());
 
         // POST the constructed JSONObject.
         HttpAsyncTask task = new HttpAsyncTask.Builder("POST", "polygons", new TypeToken<ResultBody<Polygon>>() {
@@ -71,7 +70,6 @@ public class RESTAPI {
     public static void postPolylineToServer(Polyline polyline) {
         JSONObject requestBody = new JSONObject();
         JSONObject tag = new JSONObject();
-        JSONObject l = new JSONObject();
         JSONArray pos = new JSONArray();
 
         Log.i("Start posting pg", MapsConstants.devisionLine);
@@ -79,20 +77,17 @@ public class RESTAPI {
 
         // Construct JSONObject to request to server.
         try {
-            tag
-                    .put("user_name", userName);
+            tag.put("user_name", userName);
 
             for (LatLng location : polyline.getPoints()) {
-                l
-                        .put("latitude", location.latitude)
-                        .put("longitude", location.longitude);
-                pos
-                        .put(l);
+                JSONObject l = new JSONObject();
+                l.put("latitude", location.latitude);
+                l.put("longitude", location.longitude);
+                pos.put(l);
             }
-            requestBody
-                    .put("tag", tag)
-                    .put("status", "1")
-                    .put("pos", pos);
+            requestBody.put("tag", tag);
+            requestBody.put("status", "1");
+            requestBody.put("pos", pos);
 
         } catch (JSONException e) {
             Log.e("postPolylineToServer()", "error while constructing polyline JSONObject" + e.getMessage());
@@ -114,16 +109,19 @@ public class RESTAPI {
 
 
     public static void getPolygonsFromServer() {
-        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polygons", new TypeToken<ResultBody<Polygon>>() {
+        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polygons", new TypeToken<ResultBody<MyPolygon>>() {
         }.getType(),
                 new MyCallBack() {
                     @Override
                     public void doTask(Object resultBody) {
-                        ResultBody<Polygon> result = (ResultBody<Polygon>) resultBody;
+                        ResultBody<MyPolygon> result = (ResultBody<MyPolygon>) resultBody;
+                        int i = 0;
+                        myPolygonList.clear();
 
-                        polygonList.addAll(result.getDatas());
-                        for (int i = 0; i < polygonList.size(); i++) {
-                            Log.i("GET polygons", polygonList.get(i).getId());
+                        for (MyPolygon p : result.getDatas()) {
+                            myPolygonList.add(p);
+                            Log.i("myPolygonList " + i, myPolygonList.get(i)._id);
+                            i++;
                         }
                     }
                 })
@@ -134,16 +132,19 @@ public class RESTAPI {
 
 
     public static void getPolylinesFromServer() {
-        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polylines", new TypeToken<ResultBody<Polygon>>() {
+        HttpAsyncTask task = new HttpAsyncTask.Builder("GET", "polylines", new TypeToken<ResultBody<MyPolyline>>() {
         }.getType(),
                 new MyCallBack() {
                     @Override
                     public void doTask(Object resultBody) {
-                        ResultBody<Polyline> result = (ResultBody<Polyline>) resultBody;
+                        ResultBody<MyPolyline> result = (ResultBody<MyPolyline>) resultBody;
+                        int i = 0;
+                        myPolylineList.clear();
 
-                        polylineList.addAll(result.getDatas());
-                        for (int i = 0; i < polylineList.size(); i++) {
-                            Log.i("GET polylines", polylineList.get(i).getId());
+                        for (MyPolyline p : result.getDatas()) {
+                            myPolylineList.add(p);
+                            Log.i("myPolylineList " + i, myPolylineList.get(i).tag.user_name);
+                            i++;
                         }
                     }
                 })

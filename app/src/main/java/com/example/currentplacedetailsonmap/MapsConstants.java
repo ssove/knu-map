@@ -13,6 +13,7 @@ public class MapsConstants {
     public static final int DEFAULT_POLYGON_STROKE_COLOR = Color.RED;
     public static final int DEFAULT_POLYGON_FILL_COLOR = Color.RED;
     public static final int DEFAULT_STROKE_WIDTH = 5;
+    public static final int DEFAULT_OTHER_USER_COLOR = Color.RED;
 
     // Default time interval and distance for requestLocationUpdates().
     public static final long TIME_INTERVAL_FOR_UPDATING_LOCATION = 1000; // ms

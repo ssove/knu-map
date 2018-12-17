@@ -93,6 +93,7 @@ public class HttpAsyncTask
         String strUrl = this.url + this.path;
         ResultBody resultBody = null;
 
+
         try {
             Request request = null;
             RequestBody requestBody = null;

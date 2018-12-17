@@ -45,13 +45,13 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         implements OnMapReadyCallback {
 
     public Context mContext;
+    public GoogleMap mMap;
 
     private String userName = "userName";
     private boolean isDigging = false;
     private Marker marker = null;
 
     private static final String TAG = MapsActivityCurrentPlace.class.getSimpleName();
-    private GoogleMap mMap;
     private CameraPosition mCameraPosition;
     private Polygon polygon = null;
 
@@ -106,10 +106,11 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                     makeArea();
                     Log.i("Finish makeArea()","");
 
-                    if (LastPolygonLatLngList != null)
+                    if (LastPolygonLatLngList != null) {
                         Log.e(TAG, LastPolygonLatLngList.toString());
-                    else
+                    } else {
                         Log.e(TAG, "LastPolygon variable is null");
+                    }
                     last = null;
                 } else if (locationList.contains(current)) {
                     mMap.clear();
@@ -173,6 +174,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        RESTAPI.getPolylinesFromServer();
+        RESTAPI.getPolygonsFromServer();
     }
 
     /**
@@ -251,6 +254,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 // Set the new marker.
                 MarkerOptions mMarkerOptions = new MarkerOptions().position(current);
                 marker = mMap.addMarker(mMarkerOptions);
+
+                drawPolygonsSentFromServer();
+                drawPolylinesSentFromServer();
             }
         });
 
@@ -366,6 +372,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .add(last)
                 .add(current));
 
+        RESTAPI.postPolylineToServer(polyline);
+
         return polyline;
     }
 
@@ -434,5 +442,64 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         // all set and time to build and show up!
         AlertDialog alertDialog = alertDialogBuilder.create();
         alertDialog.show();
+    }
+
+
+    private void drawPolygonsSentFromServer() {
+        int myPolygonListSize = RESTAPI.myPolygonList.size();
+
+        Log.i("In main", ".");
+        Log.i("myPolygonListSize", Integer.toString(myPolygonListSize));
+
+        for (int i = 0; i < myPolygonListSize; i++) {
+            PolygonOptions polygonOptions = new PolygonOptions();
+            MyPolygon myPolygon = RESTAPI.myPolygonList.get(i);
+            int posSize = myPolygon.pos.size();
+            ArrayList<LatLng> latLngArrayList = new ArrayList<>();
+
+            Log.i("Caught myPolygon", myPolygon._id);
+            Log.i("posSize", Integer.toString(posSize));
+
+            for (int j = 0; j < posSize; j++) {
+                LatLng latLng = new LatLng(
+                        myPolygon.pos.get(j).latitude,
+                        myPolygon.pos.get(j).longitude);
+                latLngArrayList.add(latLng);
+            }
+
+            Log.i("latLngArrayListSize", Integer.toString(latLngArrayList.size()));
+            for (int k = 0; k < posSize; k++) {
+                Log.i("Lat " + Integer.toString(k), Double.toString(latLngArrayList.get(k).latitude));
+                Log.i("Lng " + Integer.toString(k), Double.toString(latLngArrayList.get(k).longitude));
+            }
+            polygonOptions.addAll(latLngArrayList);
+            polygonOptions.fillColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
+            polygonOptions.strokeColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
+            polygonOptions.strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH);
+
+            mMap.addPolygon(polygonOptions);
+            Log.i("Drawing Complete", myPolygon._id);
+        }
+    }
+
+
+    private void drawPolylinesSentFromServer() {
+        int myPolylineListSize = RESTAPI.myPolylineList.size();
+
+        Log.i("In main", ".");
+        Log.i("myPolylineListSize", Integer.toString(myPolylineListSize));
+
+        for (int i = 0; i < myPolylineListSize; i++) {
+            PolylineOptions polylineOptions = new PolylineOptions();
+            MyPolyline myPolyline = RESTAPI.myPolylineList.get(i);
+
+            polylineOptions.add(new LatLng(myPolyline.pos.get(0).latitude, myPolyline.pos.get(0).longitude));
+            polylineOptions.add(new LatLng(myPolyline.pos.get(1).latitude, myPolyline.pos.get(1).longitude));
+            polylineOptions.color(MapsConstants.DEFAULT_POLYLINE_COLOR);
+            polylineOptions.width(MapsConstants.DEFAULT_STROKE_WIDTH);
+
+            mMap.addPolyline(polylineOptions);
+            Log.i("Drawing Complete", polylineOptions.getPoints().toString());
+        }
     }
 }
