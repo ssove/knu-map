@@ -20,6 +20,7 @@ public class RESTAPI {
     public static ArrayList<MyPolyline> myPolylineList = new ArrayList<>();
 
 
+
     public static void postPolygonToServer(Polygon polygon) {
         JSONObject requestBody = new JSONObject();
         JSONObject tag = new JSONObject();
@@ -123,6 +124,7 @@ public class RESTAPI {
                             Log.i("myPolygonList " + i, myPolygonList.get(i)._id);
                             i++;
                         }
+                        MapsActivityCurrentPlace.drawPolygonsSentFromServer();
                     }
                 })
                 .build();
@@ -146,6 +148,7 @@ public class RESTAPI {
                             Log.i("myPolylineList " + i, myPolylineList.get(i).tag.user_name);
                             i++;
                         }
+                        MapsActivityCurrentPlace.drawPolylinesSentFromServer();
                     }
                 })
                 .build();
