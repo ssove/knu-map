@@ -7,6 +7,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -45,7 +47,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         implements OnMapReadyCallback {
 
     public Context mContext;
-    public GoogleMap mMap;
+    public static GoogleMap mMap;
+    private Handler handler;
 
     private String userName = "userName";
     private boolean isDigging = false;
@@ -174,6 +177,9 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        // Prompt the user for permission.
+        getLocationPermission();
+
         RESTAPI.getPolylinesFromServer();
         RESTAPI.getPolygonsFromServer();
     }
@@ -288,11 +294,37 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
         // Move the camera to default location/zoom before getting the permission.
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, MapsConstants.DEFAULT_ZOOM));
 
-        // Prompt the user for permission.
-        getLocationPermission();
+
 
         // Turn on the My Location layer and the related control on the map.
         updateLocationUI();
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.what == 1) {
+                    RESTAPI.getPolygonsFromServer();
+                    RESTAPI.getPolylinesFromServer();
+                }
+            }
+        };
+
+
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    try {
+                        handler.sendEmptyMessage(1);
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+        new Thread(task).start();
     }
 
 
@@ -372,8 +404,6 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 .add(last)
                 .add(current));
 
-        RESTAPI.postPolylineToServer(polyline);
-
         return polyline;
     }
 
@@ -445,7 +475,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     }
 
 
-    private void drawPolygonsSentFromServer() {
+    public static void drawPolygonsSentFromServer() {
         int myPolygonListSize = RESTAPI.myPolygonList.size();
 
         Log.i("In main", ".");
@@ -473,8 +503,8 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
                 Log.i("Lng " + Integer.toString(k), Double.toString(latLngArrayList.get(k).longitude));
             }
             polygonOptions.addAll(latLngArrayList);
-            polygonOptions.fillColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
-            polygonOptions.strokeColor(MapsConstants.DEFAULT_OTHER_USER_COLOR);
+            polygonOptions.fillColor(myPolygon.color);
+            polygonOptions.strokeColor(myPolygon.color);
             polygonOptions.strokeWidth(MapsConstants.DEFAULT_STROKE_WIDTH);
 
             mMap.addPolygon(polygonOptions);
@@ -483,7 +513,7 @@ public class MapsActivityCurrentPlace extends AppCompatActivity
     }
 
 
-    private void drawPolylinesSentFromServer() {
+    public static void drawPolylinesSentFromServer() {
         int myPolylineListSize = RESTAPI.myPolylineList.size();
 
         Log.i("In main", ".");
